@@ -27,7 +27,7 @@ import {
   sanitizeNodesForStorage,
   uploadCanvasAsset,
 } from '../lib/canvas/persistence';
-import { getSupabaseBrowserClient, isSupabaseConfigured } from '../lib/supabase/client';
+import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import type {
   CanvasAssetItem,
   CanvasEdge,
@@ -43,26 +43,27 @@ type PersistenceStatus =
   | 'saved'
   | 'error';
 
-export function useCanvasBoard() {
-  const shouldHydrateFromSupabase = isSupabaseConfigured();
+export function useCanvasBoard(workspaceId?: string) {
+  const supabase = getSupabaseBrowserClient();
+  const shouldPersist = Boolean(supabase && workspaceId);
+
   const [rawNodes, setNodes, onNodesChange] = useNodesState<CanvasNodeData>(
-    shouldHydrateFromSupabase ? [] : initialNodes,
+    shouldPersist ? [] : initialNodes,
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdge>(
-    shouldHydrateFromSupabase ? [] : initialEdges,
+    shouldPersist ? [] : initialEdges,
   );
   const { screenToFlowPosition } = useReactFlow();
   const [persistenceStatus, setPersistenceStatus] = useState<PersistenceStatus>(
-    shouldHydrateFromSupabase ? 'loading' : 'local-only',
+    shouldPersist ? 'loading' : 'local-only',
   );
   const [persistenceError, setPersistenceError] = useState<string | null>(null);
-  const [isCanvasReady, setIsCanvasReady] = useState(!shouldHydrateFromSupabase);
+  const [isCanvasReady, setIsCanvasReady] = useState(!shouldPersist);
   const spawnCountRef = useRef(0);
   const objectUrlsRef = useRef<string[]>([]);
   const hasLoadedRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
-  const supabase = getSupabaseBrowserClient();
-  const nodesRef = useRef<CanvasNode[]>(shouldHydrateFromSupabase ? [] : initialNodes);
+  const nodesRef = useRef<CanvasNode[]>(shouldPersist ? [] : initialNodes);
 
   useEffect(() => {
     nodesRef.current = rawNodes;
@@ -77,9 +78,7 @@ export function useCanvasBoard() {
   }, []);
 
   useEffect(() => {
-    if (!supabase) {
-      return;
-    }
+    if (!supabase || !workspaceId) return;
 
     const client = supabase;
     let isActive = true;
@@ -89,70 +88,52 @@ export function useCanvasBoard() {
       setPersistenceError(null);
 
       try {
-        const canvas = await loadCanvasState(client);
+        const canvas = await loadCanvasState(client, workspaceId!);
 
-        if (!isActive) {
-          return;
-        }
+        if (!isActive) return;
 
-        setNodes(
-          canvas.nodes?.length ? sanitizeNodesForStorage(canvas.nodes) : initialNodes,
-        );
-        setEdges([]);
+        setNodes(canvas.nodes.length ? sanitizeNodesForStorage(canvas.nodes) : initialNodes);
+        setEdges(canvas.edges);
         hasLoadedRef.current = true;
         setIsCanvasReady(true);
         setPersistenceStatus('saved');
       } catch (error) {
-        if (!isActive) {
-          return;
-        }
+        if (!isActive) return;
 
         hasLoadedRef.current = true;
         setIsCanvasReady(true);
         setPersistenceStatus('error');
-        setPersistenceError(
-          error instanceof Error ? error.message : 'Failed to load canvas',
-        );
+        setPersistenceError(error instanceof Error ? error.message : 'Failed to load canvas');
       }
     }
 
     hydrateCanvas();
 
-    return () => {
-      isActive = false;
-    };
-  }, [setEdges, setNodes, supabase]);
+    return () => { isActive = false; };
+  }, [setEdges, setNodes, supabase, workspaceId]);
 
   useEffect(() => {
-    if (!supabase || !hasLoadedRef.current) {
-      return;
-    }
+    if (!supabase || !workspaceId || !hasLoadedRef.current) return;
 
     const client = supabase;
-    if (saveTimerRef.current) {
-      window.clearTimeout(saveTimerRef.current);
-    }
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
 
     setPersistenceStatus('saving');
     saveTimerRef.current = window.setTimeout(async () => {
       try {
-        await saveCanvasState(client, { nodes: rawNodes, edges });
+        await saveCanvasState(client, workspaceId!, { nodes: rawNodes, edges });
         setPersistenceStatus('saved');
         setPersistenceError(null);
       } catch (error) {
         setPersistenceStatus('error');
-        setPersistenceError(
-          error instanceof Error ? error.message : 'Failed to save canvas',
-        );
+        setPersistenceError(error instanceof Error ? error.message : 'Failed to save canvas');
       }
     }, 700);
 
     return () => {
-      if (saveTimerRef.current) {
-        window.clearTimeout(saveTimerRef.current);
-      }
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
-  }, [edges, rawNodes, supabase]);
+  }, [edges, rawNodes, supabase, workspaceId]);
 
   const updateNodeData = useCallback(
     (nodeId: string, patch: Partial<CanvasNodeData>) => {
@@ -300,8 +281,8 @@ export function useCanvasBoard() {
         let previewUrl: string | undefined;
         let storagePath: string | undefined;
 
-        if (supabase) {
-          const uploadedAsset = await uploadCanvasAsset(supabase, file, index);
+        if (supabase && workspaceId) {
+          const uploadedAsset = await uploadCanvasAsset(supabase, file, index, workspaceId);
           previewUrl = uploadedAsset.publicUrl;
           storagePath = uploadedAsset.path;
         } else if (type === 'image' || type === 'video') {

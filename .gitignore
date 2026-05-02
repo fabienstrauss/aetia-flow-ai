@@ -42,6 +42,7 @@ yarn-error.log*
 next-env.d.ts
 
 # local generated skill folders and sample video workspace
+./.idea/
 /.adal/
 /.agents/
 /.augment/

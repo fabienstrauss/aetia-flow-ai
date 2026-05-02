@@ -9,6 +9,7 @@ import { isGeminiConfigured } from '../../../lib/providers/gemini';
 export const maxDuration = 300;
 
 export type GenerateCampaignRequest = {
+  workspaceId: string;
   platform: string;
   contentType: ContentTypeId;
   audience: string;
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
       : basePrompt;
 
     const result = await generateAndStoreCampaignContent({
+      workspaceId: body.workspaceId,
       platform: body.platform,
       contentType: body.contentType,
       audience: body.audience,

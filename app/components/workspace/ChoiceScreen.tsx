@@ -144,6 +144,7 @@ export type ChoiceConfig = {
 };
 
 type ChoiceScreenProps = {
+  workspaceId?: string;
   onComplete: (config: ChoiceConfig) => void;
   initialConfig?: ChoiceConfig | null;
   onConfigChange?: (config: ChoiceConfig) => void;
@@ -386,7 +387,7 @@ function PlatformSection({
 
 // --- Main Component ---
 
-export function ChoiceScreen({ onComplete, initialConfig, onConfigChange }: ChoiceScreenProps) {
+export function ChoiceScreen({ workspaceId, onComplete, initialConfig, onConfigChange }: ChoiceScreenProps) {
   const [selectedPlatforms, setSelectedPlatforms] = useState<PlatformId[]>(['instagram']);
   const [platformConfigs, setPlatformConfigs] = useState<Partial<Record<PlatformId, PlatformConfig>>>({
     instagram: DEFAULT_PLATFORM_CONFIG(),
@@ -430,7 +431,8 @@ export function ChoiceScreen({ onComplete, initialConfig, onConfigChange }: Choi
 
     setIsUploading(true);
     try {
-      const { publicUrl } = await uploadCanvasAsset(supabase, file, 0);
+      if (!workspaceId) return;
+      const { publicUrl } = await uploadCanvasAsset(supabase, file, 0, workspaceId);
       setProductReferenceUrl(publicUrl);
     } catch (error) {
       console.error('Failed to upload product reference:', error);

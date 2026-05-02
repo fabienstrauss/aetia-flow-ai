@@ -1,11 +1,8 @@
 import 'server-only';
 
-import { getSupabaseServerClient, getSupabaseStoragePublicUrl } from '../supabase/server';
-import {
-  GENERATED_CONTENT_BUCKET,
-  GENERATED_CONTENT_TABLE,
-  WORKSPACE_ID,
-} from '../supabase/constants';
+import { getSupabaseServerClient } from '../supabase/server';
+import { uploadGeneratedContent } from '../supabase/storage-server';
+import { GENERATED_CONTENT_BUCKET, GENERATED_CONTENT_TABLE } from '../supabase/constants';
 import type { ContentTypeId, AspectRatioId, GeneratedContentRecord } from './types';
 import type { WorkspaceContextPack } from '../context/workspace-context';
 
@@ -28,39 +25,6 @@ function toApiAspectRatio(ar: AspectRatioId): string {
   return map[ar];
 }
 
-async function uploadToGeneratedBucket(input: {
-  bytes: Uint8Array;
-  mimeType: string;
-  extension: string;
-  prefix: string;
-}): Promise<{ path: string; publicUrl: string }> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) throw new Error('Missing Supabase env');
-
-  const path = `${input.prefix}-${Date.now()}.${input.extension}`;
-  const uploadUrl = `${url}/storage/v1/object/${GENERATED_CONTENT_BUCKET}/${path}`;
-
-  const response = await fetch(uploadUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${anonKey}`,
-      apikey: anonKey,
-      'Content-Type': input.mimeType,
-      'x-upsert': 'true',
-    },
-    body: Buffer.from(input.bytes),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Storage upload failed: ${response.status} ${await response.text()}`);
-  }
-
-  return {
-    path,
-    publicUrl: getSupabaseStoragePublicUrl(GENERATED_CONTENT_BUCKET, path),
-  };
-}
 
 async function generateImageBytes(
   prompt: string,
@@ -224,6 +188,7 @@ async function generateVideoBytes(
 }
 
 export async function generateAndStoreCampaignContent(input: {
+  workspaceId: string;
   platform: string;
   contentType: ContentTypeId;
   audience: string;
@@ -269,7 +234,7 @@ export async function generateAndStoreCampaignContent(input: {
 
     const { bytes } = await generateVideoBytes(input.prompt, input.aspectRatio, referenceImageUrl);
     console.log(`[generate] Uploading video to storage…`);
-    const uploaded = await uploadToGeneratedBucket({
+    const uploaded = await uploadGeneratedContent({
       bytes,
       mimeType: 'video/mp4',
       extension: 'mp4',
@@ -307,13 +272,13 @@ export async function generateAndStoreCampaignContent(input: {
     const { bytes, mimeType: imgMime } = await generateImageBytes(input.prompt, input.aspectRatio, referenceImageUrl);
     const ext = imgMime.includes('jpeg') ? 'jpg' : 'png';
     console.log(`[generate] Uploading image to storage…`);
-    const uploaded = await uploadToGeneratedBucket({ bytes, mimeType: imgMime, extension: ext, prefix });
+    const uploaded = await uploadGeneratedContent({ bytes, mimeType: imgMime, extension: ext, prefix });
     storagePath = uploaded.path;
     publicUrl = uploaded.publicUrl;
     mimeType = imgMime;
   }
 
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   // When refining: clean up old storage file and DB record before inserting fresh
   if (input.existingId) {
@@ -325,7 +290,7 @@ export async function generateAndStoreCampaignContent(input: {
 
   console.log(`[generate] Saving record to DB…`);
   const payload = {
-    workspace_id: WORKSPACE_ID,
+    workspace_id: input.workspaceId,
     platform: input.platform,
     content_type: input.contentType,
     prompt: input.prompt,
@@ -348,7 +313,7 @@ export async function generateAndStoreCampaignContent(input: {
 }
 
 export async function deleteGeneratedContent(id: string, storagePath: string): Promise<void> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { data: existingRecord } = await supabase
     .from(GENERATED_CONTENT_TABLE)
