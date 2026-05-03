@@ -4,24 +4,23 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { loadCampaignConfig, saveCampaignConfig } from '../lib/campaign/persistence';
 import type { ChoiceConfig } from '../lib/campaign/types';
-import { getSupabaseBrowserClient, isSupabaseConfigured } from '../lib/supabase/client';
+import { getSupabaseBrowserClient } from '../lib/supabase/client';
 
 type PersistenceStatus = 'local-only' | 'loading' | 'ready' | 'saving' | 'saved' | 'error';
 
-export function useChoiceConfig() {
+export function useChoiceConfig(workspaceId?: string) {
   const supabase = getSupabaseBrowserClient();
-  const configured = isSupabaseConfigured();
+  const shouldPersist = Boolean(supabase && workspaceId);
 
   const [config, setConfig] = useState<ChoiceConfig | null>(null);
-  const [status, setStatus] = useState<PersistenceStatus>(configured ? 'loading' : 'local-only');
+  const [status, setStatus] = useState<PersistenceStatus>(shouldPersist ? 'loading' : 'local-only');
   const [error, setError] = useState<string | null>(null);
 
   const hasLoadedRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load on mount
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase || !workspaceId) return;
 
     let active = true;
 
@@ -29,7 +28,7 @@ export function useChoiceConfig() {
       setStatus('loading');
       setError(null);
       try {
-        const loaded = await loadCampaignConfig(supabase!);
+        const loaded = await loadCampaignConfig(supabase!, workspaceId!);
         if (!active) return;
         if (loaded) setConfig(loaded);
         hasLoadedRef.current = true;
@@ -44,18 +43,17 @@ export function useChoiceConfig() {
 
     hydrate();
     return () => { active = false; };
-  }, [supabase]);
+  }, [supabase, workspaceId]);
 
-  // Debounced save whenever config changes post-load
   useEffect(() => {
-    if (!supabase || !hasLoadedRef.current || !config) return;
+    if (!supabase || !workspaceId || !hasLoadedRef.current || !config) return;
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     setStatus('saving');
 
     saveTimerRef.current = setTimeout(async () => {
       try {
-        await saveCampaignConfig(supabase, config);
+        await saveCampaignConfig(supabase, workspaceId, config);
         setStatus('saved');
         setError(null);
       } catch (err) {
@@ -67,7 +65,7 @@ export function useChoiceConfig() {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [config, supabase]);
+  }, [config, supabase, workspaceId]);
 
   const updateConfig = useCallback((next: ChoiceConfig) => {
     if (!hasLoadedRef.current) hasLoadedRef.current = true;

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VirallForge",
-  description: "VirallForge: AI-assisted social content workspace.",
+  title: "Aetia",
+  description: "Aetia: AI-assisted social content workspace.",
 };
 
 export default function RootLayout({

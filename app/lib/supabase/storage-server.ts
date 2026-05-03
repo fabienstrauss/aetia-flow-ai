@@ -1,49 +1,66 @@
 import 'server-only';
 
-import { CANVAS_ASSETS_BUCKET, CANVAS_BOARD_ID } from './constants';
+import { getSupabaseAdminClient } from './server';
+import { CANVAS_ASSETS_BUCKET, GENERATED_CONTENT_BUCKET } from './constants';
 
-function getSupabaseStorageEnv() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+async function uploadToBucket(input: {
+  bucket: string;
+  path: string;
+  bytes: Uint8Array;
+  mimeType: string;
+}): Promise<{ path: string; publicUrl: string }> {
+  const client = getSupabaseAdminClient();
 
-  if (!url || !anonKey) {
-    throw new Error('Missing Supabase env for server storage upload');
-  }
+  const { error } = await client.storage
+    .from(input.bucket)
+    .upload(input.path, input.bytes, { contentType: input.mimeType, upsert: true });
 
-  return { url, anonKey };
+  if (error) throw new Error(`Storage upload failed: ${error.message}`);
+
+  const { data } = client.storage.from(input.bucket).getPublicUrl(input.path);
+
+  return { path: input.path, publicUrl: data.publicUrl };
 }
 
-function buildPublicUrl(baseUrl: string, path: string) {
-  return `${baseUrl}/storage/v1/object/public/${CANVAS_ASSETS_BUCKET}/${path}`;
+function mimeTypeToExtension(mimeType: string): string {
+  if (mimeType.includes('wav')) return 'wav';
+  if (mimeType.includes('mpeg') || mimeType.includes('mp3')) return 'mp3';
+  if (mimeType.includes('ogg') || mimeType.includes('opus')) return 'ogg';
+  return 'wav';
 }
 
+// Canvas-generated assets (used by gemini.ts and hera.ts canvas generation).
+// workspaceId organises files per workspace; Phase 2 passes the real UUID.
 export async function uploadGeneratedAssetToSupabase(input: {
   bytes: Uint8Array;
   mimeType: string;
   extension: string;
   prefix: string;
-}) {
-  const { url, anonKey } = getSupabaseStorageEnv();
-  const path = `${CANVAS_BOARD_ID}/generated/${input.prefix}-${Date.now()}.${input.extension}`;
-  const uploadUrl = `${url}/storage/v1/object/${CANVAS_ASSETS_BUCKET}/${path}`;
+  workspaceId?: string;
+}): Promise<{ path: string; publicUrl: string }> {
+  const folder = input.workspaceId ?? 'shared';
+  const path = `${folder}/${input.prefix}-${Date.now()}.${input.extension}`;
+  return uploadToBucket({ bucket: CANVAS_ASSETS_BUCKET, path, bytes: input.bytes, mimeType: input.mimeType });
+}
 
-  const response = await fetch(uploadUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${anonKey}`,
-      apikey: anonKey,
-      'Content-Type': input.mimeType,
-      'x-upsert': 'true',
-    },
-    body: Buffer.from(input.bytes),
-  });
+// Campaign-generated images and videos.
+export async function uploadGeneratedContent(input: {
+  bytes: Uint8Array;
+  mimeType: string;
+  extension: string;
+  prefix: string;
+}): Promise<{ path: string; publicUrl: string }> {
+  const path = `${input.prefix}-${Date.now()}.${input.extension}`;
+  return uploadToBucket({ bucket: GENERATED_CONTENT_BUCKET, path, bytes: input.bytes, mimeType: input.mimeType });
+}
 
-  if (!response.ok) {
-    throw new Error(`Supabase storage upload failed: ${response.status} ${await response.text()}`);
-  }
-
-  return {
-    path,
-    publicUrl: buildPublicUrl(url, path),
-  };
+// Voiceover audio files attached to generated content.
+export async function uploadVoiceoverContent(input: {
+  bytes: Uint8Array;
+  mimeType: string;
+  prefix: string;
+}): Promise<{ path: string; publicUrl: string }> {
+  const extension = mimeTypeToExtension(input.mimeType);
+  const path = `${input.prefix}-voiceover-${Date.now()}.${extension}`;
+  return uploadToBucket({ bucket: GENERATED_CONTENT_BUCKET, path, bytes: input.bytes, mimeType: input.mimeType });
 }

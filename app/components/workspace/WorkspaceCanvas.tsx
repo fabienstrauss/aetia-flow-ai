@@ -21,7 +21,7 @@ import { CanvasCardNode } from './nodes/CanvasCardNode';
 import { contentTemplates } from '../../lib/templates/catalog';
 import type { WorkspaceContextPack } from '../../lib/context/workspace-context';
 import type { ContentTypeId, AspectRatioId, GeneratedContentRecord } from '../../lib/campaign/types';
-import { GENERATED_CONTENT_TABLE, WORKSPACE_ID } from '../../lib/supabase/constants';
+import { GENERATED_CONTENT_TABLE } from '../../lib/supabase/constants';
 import { getSupabaseBrowserClient } from '../../lib/supabase/client';
 
 type GenerationJobStatus = 'queued' | 'generating' | 'done' | 'error';
@@ -77,7 +77,11 @@ function trimLabel(label: string, maxLength = 42) {
   return `${base.slice(0, visibleBaseLength)}…${extension}`;
 }
 
-export function WorkspaceCanvas() {
+type Props = {
+  workspaceId?: string;
+};
+
+export function WorkspaceCanvas({ workspaceId }: Props) {
   const {
     nodes,
     onNodesChange,
@@ -85,8 +89,7 @@ export function WorkspaceCanvas() {
     persistenceStatus,
     persistenceError,
     isCanvasReady,
-  } =
-    useCanvasBoard();
+  } = useCanvasBoard(workspaceId);
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -102,7 +105,7 @@ export function WorkspaceCanvas() {
   const [generatePrompt, setGeneratePrompt] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [includeImages, setIncludeImages] = useState(true);
-  const { config: persistedChoiceConfig, updateConfig: persistChoiceConfig } = useChoiceConfig();
+  const { config: persistedChoiceConfig, updateConfig: persistChoiceConfig } = useChoiceConfig(workspaceId);
   const [jobs, setJobs] = useState<GenerationJob[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [lightboxAsset, setLightboxAsset] = useState<{ url: string; type: 'image' | 'video'; title: string } | null>(null);
@@ -114,12 +117,14 @@ export function WorkspaceCanvas() {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return;
 
+    if (!workspaceId) return;
+
     supabase
       .from(GENERATED_CONTENT_TABLE)
       .select('*')
-      .eq('workspace_id', WORKSPACE_ID)
+      .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: true })
-      .then(({ data }) => {
+      .then(({ data }: { data: GeneratedContentRecord[] | null }) => {
         if (!data || data.length === 0) return;
         setJobs((prev) => {
           if (prev.length > 0) return prev; // don't overwrite active session
@@ -148,7 +153,7 @@ export function WorkspaceCanvas() {
       const res = await fetch('/api/context/pack', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId: WORKSPACE_ID }),
+        body: JSON.stringify({ workspaceId }),
       });
       const json = (await res.json()) as { contextPack?: WorkspaceContextPack; error?: string };
       if (!res.ok || !json.contextPack) throw new Error(json.error ?? 'Failed to extract context');
@@ -232,7 +237,7 @@ export function WorkspaceCanvas() {
       const { error } = await supabase
         .from(GENERATED_CONTENT_TABLE)
         .delete()
-        .eq('workspace_id', WORKSPACE_ID);
+        .eq('workspace_id', workspaceId ?? '');
 
       if (error) throw error;
       setJobs([]);
@@ -289,7 +294,7 @@ export function WorkspaceCanvas() {
         const ctxRes = await fetch('/api/context/pack', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ workspaceId: WORKSPACE_ID }),
+          body: JSON.stringify({ workspaceId }),
         });
         const ctxJson = (await ctxRes.json()) as { contextPack?: WorkspaceContextPack; error?: string };
         if (!ctxRes.ok || !ctxJson.contextPack) throw new Error(ctxJson.error ?? 'Failed to extract context');
@@ -517,7 +522,7 @@ export function WorkspaceCanvas() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ workspaceId: 'main' }),
+        body: JSON.stringify({ workspaceId }),
       });
 
       const json = (await response.json()) as {
@@ -628,6 +633,7 @@ export function WorkspaceCanvas() {
           ].join(' ')}
         >
           <ChoiceScreen
+            workspaceId={workspaceId}
             initialConfig={persistedChoiceConfig}
             onConfigChange={persistChoiceConfig}
             onComplete={(config) => {
