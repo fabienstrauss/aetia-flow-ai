@@ -79,9 +79,11 @@ function trimLabel(label: string, maxLength = 42) {
 
 type Props = {
   workspaceId?: string;
+  workspaceName?: string;
+  userEmail?: string;
 };
 
-export function WorkspaceCanvas({ workspaceId }: Props) {
+export function WorkspaceCanvas({ workspaceId, workspaceName = 'Workspace', userEmail = '' }: Props) {
   const {
     nodes,
     onNodesChange,
@@ -574,6 +576,8 @@ export function WorkspaceCanvas({ workspaceId }: Props) {
         persistenceError={persistenceError}
         currentStep={currentStep}
         onStepClick={setCurrentStep}
+        workspaceName={workspaceName}
+        userEmail={userEmail}
       />
 
       <main className="relative h-full overflow-hidden">

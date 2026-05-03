@@ -5,10 +5,20 @@ import { ReactFlowProvider } from 'reactflow';
 
 import { WorkspaceCanvas } from './WorkspaceCanvas';
 
-export function WorkspaceScreen() {
+type Props = {
+  workspaceId: string;
+  workspaceName: string;
+  userEmail: string;
+};
+
+export function WorkspaceScreen({ workspaceId, workspaceName, userEmail }: Props) {
   return (
     <ReactFlowProvider>
-      <WorkspaceCanvas />
+      <WorkspaceCanvas
+        workspaceId={workspaceId}
+        workspaceName={workspaceName}
+        userEmail={userEmail}
+      />
     </ReactFlowProvider>
   );
 }
