@@ -50,7 +50,7 @@ export function TopNavigation({
       {/* Left — workspace name, links back to selector */}
       <div className="pointer-events-auto">
         <button
-          onClick={() => router.push('/')}
+          onClick={() => router.push('/workspaces')}
           className="flex items-center gap-1.5 rounded-full border border-white/20 bg-slate-900/10 px-3 py-1.5 text-[10px] font-bold tracking-[0.10em] text-slate-600 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] backdrop-blur-xl transition-colors hover:bg-white/50 hover:text-slate-900 max-w-[180px] truncate"
           title={workspaceName}
         >
