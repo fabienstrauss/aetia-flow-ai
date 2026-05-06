@@ -1,6 +1,6 @@
 export type TemplateAsset = {
   type: 'image' | 'video';
-  src: string; // bucket-relative filename, e.g. "fashion_template.png"
+  src: string; // bucket-relative filename, e.g. "fashion_template.webp"
   label: string;
 };
 
@@ -35,7 +35,7 @@ export const contentTemplates: ContentTemplate[] = [
       'High-end fashion editorial video. 0-4s: Slow tracking shot of a model in a red varsity cardigan on a striped track at an industrial port. 4-8s: The model stands motionless with a direct gaze while the massive ornate tapestry behind him ripples in the breeze. 8-12s: Extreme close-ups of textile patterns and industrial machinery under golden hour light. Rich filmic colors and deep shadows.',
     animationPrompt:
       'A refined looping animation where the suspended tapestry behind the model waves gently while golden sunlight shimmers across the industrial port landscape.',
-    assets: [{ type: 'image', src: 'fashion_template.png', label: 'Fashion Editorial' }],
+    assets: [{ type: 'image', src: 'fashion_template.webp', label: 'Fashion Editorial' }],
   },
   {
     id: 'magazine',
@@ -54,7 +54,7 @@ export const contentTemplates: ContentTemplate[] = [
       'A vintage editorial video in a low-fidelity offset-print style. 0-4s: A textured cream paper poster unfolds to reveal bold serif headings and dense text columns. 4-8s: Close-ups of the distressed ink and high-contrast illustration of the dog on the blue lounge chair. 8-12s: Smooth camera movement over the aged print details. Rich saturated colors and filmic shadows.',
     animationPrompt:
       'A looping animation with subtle art-paper texture jitter, ink-bleed effects on the typography, and a slow zoom on the high-contrast centerpiece illustration.',
-    assets: [{ type: 'image', src: 'magazine_template.png', label: 'Magazine Spread' }],
+    assets: [{ type: 'image', src: 'magazine_template.webp', label: 'Magazine Spread' }],
   },
   {
     id: 'movie-poster',
@@ -73,7 +73,7 @@ export const contentTemplates: ContentTemplate[] = [
       'Clever POV commercial. 0-4s: Smooth camera move looking up from inside a box as flaps open to reveal a bright blue sky. 4-8s: Two curious cows peer in with inquisitive expressions. 8-12s: Bold typography reveals itself on the box wall as the scene transitions to a minimalist brand logo. Playful, polished, and disruptive pacing.',
     animationPrompt:
       'A playful looping animation from inside a box where curious subjects peek in and out of the opening against a shimmering blue sky.',
-    assets: [{ type: 'image', src: 'movie_poster_template.png', label: 'Movie Poster' }],
+    assets: [{ type: 'image', src: 'movie_poster_template.webp', label: 'Movie Poster' }],
   },
   {
     id: 'y2k-poster',
@@ -92,7 +92,7 @@ export const contentTemplates: ContentTemplate[] = [
       'Loud, energetic Y2K streetwear commercial. 0-3s: Rapid flashes of star-sticker graphics and smiley faces over deep blue. 3-6s: Kinetic typography reveal with massive 3D yellow block letters. 6-9s: Portrait of a person in a hoodie with a red lollipop, posing confidently. 9-12s: Dynamic graphic collage with a bright yellow pill-shaped CTA. Fast, high-energy pacing.',
     animationPrompt:
       'A vibrant looping animation with floating yellow star stickers, bouncing 3D block letters, and a rotating smiley face graphic on a deep blue gradient background.',
-    assets: [{ type: 'image', src: 'y2k_poster_template.jpg', label: 'Y2K Poster' }],
+    assets: [{ type: 'image', src: 'y2k_poster_template.webp', label: 'Y2K Poster' }],
   },
   {
     id: 'hyper-motion',
@@ -244,6 +244,6 @@ export const contentTemplates: ContentTemplate[] = [
       'Serene luxury product commercial. 0-4s: Slow pan across a travertine stone slab resting on a bathtub edge, revealing frosted glass skincare bottles. 4-8s: Macro shots of the gold collar catching the morning sun and the rich texture of the cream. 8-12s: Soft movement of sheer linen curtains in the background as sunlight casts sharp shadows over the scene. Organic, calming, and high-end motion.',
     animationPrompt:
       'A calm looping animation with warm morning sunlight shimmering across frosted glass bottles and organic stone textures, while sheer linen curtains move gently in the background.',
-    assets: [{ type: 'image', src: 'clean_product_template.jpeg', label: 'Clean Minimalist' }],
+    assets: [{ type: 'image', src: 'clean_product_template.webp', label: 'Clean Minimalist' }],
   },
 ];
