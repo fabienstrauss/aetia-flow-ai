@@ -92,7 +92,7 @@ export function useCanvasBoard(workspaceId?: string) {
 
         if (!isActive) return;
 
-        setNodes(canvas.nodes.length ? sanitizeNodesForStorage(canvas.nodes) : initialNodes);
+        setNodes(canvas.nodes.length ? sanitizeNodesForStorage(canvas.nodes) : []);
         setEdges(canvas.edges);
         hasLoadedRef.current = true;
         setIsCanvasReady(true);
