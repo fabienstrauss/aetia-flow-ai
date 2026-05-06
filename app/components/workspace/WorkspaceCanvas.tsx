@@ -23,6 +23,7 @@ import type { WorkspaceContextPack } from '../../lib/context/workspace-context';
 import type { ContentTypeId, AspectRatioId, GeneratedContentRecord } from '../../lib/campaign/types';
 import { GENERATED_CONTENT_TABLE } from '../../lib/supabase/constants';
 import { getSupabaseBrowserClient } from '../../lib/supabase/client';
+import type { WorkspaceSummary } from './WorkspaceScreen';
 
 type GenerationJobStatus = 'queued' | 'generating' | 'done' | 'error';
 
@@ -81,9 +82,17 @@ type Props = {
   workspaceId?: string;
   workspaceName?: string;
   userEmail?: string;
+  userAvatarUrl?: string;
+  workspaces?: WorkspaceSummary[];
 };
 
-export function WorkspaceCanvas({ workspaceId, workspaceName = 'Workspace', userEmail = '' }: Props) {
+export function WorkspaceCanvas({
+  workspaceId,
+  workspaceName = 'Workspace',
+  userEmail = '',
+  userAvatarUrl,
+  workspaces = [],
+}: Props) {
   const {
     nodes,
     onNodesChange,
@@ -576,15 +585,18 @@ export function WorkspaceCanvas({ workspaceId, workspaceName = 'Workspace', user
         persistenceError={persistenceError}
         currentStep={currentStep}
         onStepClick={setCurrentStep}
+        workspaceId={workspaceId}
         workspaceName={workspaceName}
+        workspaces={workspaces}
         userEmail={userEmail}
+        userAvatarUrl={userAvatarUrl}
       />
 
       <main className="relative h-full overflow-hidden">
-        {/* Step 1: Brainstorming (ReactFlow) */}
-        <div 
+        {/* Step 1: Brainstorming (ReactFlow) — no top padding, nav floats over canvas */}
+        <div
           className={[
-            'absolute inset-0 pt-24 transition-all duration-500 ease-in-out',
+            'absolute inset-0 transition-all duration-500 ease-in-out',
             currentStep === 1 ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 pointer-events-none'
           ].join(' ')}
         >
@@ -609,7 +621,7 @@ export function WorkspaceCanvas({ workspaceId, workspaceName = 'Workspace', user
               />
               <Controls
                 position="top-right"
-                className="!top-4 !right-4 !rounded-2xl !border !border-slate-200 !bg-white/90 !shadow-lg !backdrop-blur"
+                className="!top-16 !right-4 !rounded-2xl !border !border-slate-200 !bg-white/90 !shadow-lg !backdrop-blur"
               />
               <MiniMap
                 pannable
@@ -628,10 +640,10 @@ export function WorkspaceCanvas({ workspaceId, workspaceName = 'Workspace', user
           )}
         </div>
 
-        {/* Step 2: Choice */}
-        <div 
+        {/* Step 2: Choice — offset by nav height so content starts below the pills */}
+        <div
           className={[
-            'absolute inset-0 pt-24 transition-all duration-500 ease-in-out overflow-y-auto',
+            'absolute inset-0 pt-16 transition-all duration-500 ease-in-out overflow-y-auto',
             currentStep === 2 ? 'translate-x-0 opacity-100' : (currentStep < 2 ? 'translate-x-full opacity-0' : '-translate-x-full opacity-0'),
             currentStep !== 2 ? 'pointer-events-none' : ''
           ].join(' ')}
@@ -647,10 +659,10 @@ export function WorkspaceCanvas({ workspaceId, workspaceName = 'Workspace', user
           />
         </div>
 
-        {/* Step 3: Generating */}
+        {/* Step 3: Generating — same nav offset */}
         <div
           className={[
-            'absolute inset-0 pt-24 transition-all duration-500 ease-in-out',
+            'absolute inset-0 pt-16 transition-all duration-500 ease-in-out',
             currentStep === 3 ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
           ].join(' ')}
         >

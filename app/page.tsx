@@ -31,15 +31,6 @@ export default async function HomePage() {
     redirect(`/workspace/${created.id}`);
   }
 
-  // Single workspace — skip the selector.
-  if (workspaces.length === 1) {
-    redirect(`/workspace/${workspaces[0].id}`);
-  }
-
-  return (
-    <WorkspaceSelector
-      workspaces={workspaces}
-      userEmail={user.email ?? ''}
-    />
-  );
+  // Always go straight to the first workspace — switcher lives in the nav.
+  redirect(`/workspace/${workspaces[0].id}`);
 }
