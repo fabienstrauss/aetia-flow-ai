@@ -35,20 +35,6 @@ type VeoOperation = {
   };
 };
 
-function getGeminiApiKey() {
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    throw new Error('Missing GEMINI_API_KEY');
-  }
-
-  return apiKey;
-}
-
-export function isGeminiConfigured() {
-  return Boolean(process.env.GEMINI_API_KEY);
-}
-
 function createGenerationPayload(input: {
   type: 'image' | 'video';
   prompt: string;
@@ -89,8 +75,7 @@ function createGenerationPayload(input: {
   };
 }
 
-async function generateImagePayload(prompt: string) {
-  const apiKey = getGeminiApiKey();
+async function generateImagePayload(prompt: string, apiKey: string) {
   const response = await fetch(
     `${GEMINI_API_BASE}/models/${GEMINI_IMAGE_MODEL}:generateContent`,
     {
@@ -149,8 +134,7 @@ async function generateImagePayload(prompt: string) {
   });
 }
 
-async function startVideoGeneration(prompt: string) {
-  const apiKey = getGeminiApiKey();
+async function startVideoGeneration(prompt: string, apiKey: string) {
   const response = await fetch(
     `${GEMINI_API_BASE}/models/${GEMINI_VEO_MODEL}:predictLongRunning`,
     {
@@ -175,8 +159,7 @@ async function startVideoGeneration(prompt: string) {
   return (await response.json()) as VeoOperation;
 }
 
-async function pollVideoOperation(operationName: string) {
-  const apiKey = getGeminiApiKey();
+async function pollVideoOperation(operationName: string, apiKey: string) {
   let attempts = 0;
 
   while (attempts < 60) {
@@ -203,15 +186,15 @@ async function pollVideoOperation(operationName: string) {
   throw new Error('Timed out waiting for Veo video generation');
 }
 
-async function generateVideoPayload(prompt: string) {
-  const operation = await startVideoGeneration(prompt);
+async function generateVideoPayload(prompt: string, apiKey: string) {
+  const operation = await startVideoGeneration(prompt, apiKey);
   const operationName = operation.name;
 
   if (!operationName) {
     throw new Error('Veo returned no operation name');
   }
 
-  const completed = await pollVideoOperation(operationName);
+  const completed = await pollVideoOperation(operationName, apiKey);
   const videoUri =
     completed.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
 
@@ -221,7 +204,7 @@ async function generateVideoPayload(prompt: string) {
 
   const downloadResponse = await fetch(videoUri, {
     headers: {
-      'x-goog-api-key': getGeminiApiKey(),
+      'x-goog-api-key': apiKey,
     },
   });
 
@@ -248,13 +231,13 @@ async function generateVideoPayload(prompt: string) {
   });
 }
 
-export async function generateCanvasPayloadWithGemini(input: GenerateInput) {
+export async function generateCanvasPayloadWithGemini(input: GenerateInput, apiKey: string) {
   if (input.type === 'image') {
-    return generateImagePayload(input.prompt);
+    return generateImagePayload(input.prompt, apiKey);
   }
 
   if (input.type === 'video') {
-    return generateVideoPayload(input.prompt);
+    return generateVideoPayload(input.prompt, apiKey);
   }
 
   throw new Error('Gemini provider is currently only wired for image and video generation');

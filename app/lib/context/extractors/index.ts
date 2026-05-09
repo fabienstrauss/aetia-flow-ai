@@ -8,6 +8,7 @@ import { extractVideoContext } from './video';
 export async function extractContextFromSource(input: {
   source: ContextSource;
   fingerprint: string;
+  apiKey: string;
 }): Promise<ExtractedContextArtifact> {
   if (input.source.sourceType === 'choice-config') {
     return extractChoiceConfigContext({
@@ -32,6 +33,7 @@ export async function extractContextFromSource(input: {
     return extractImageContext({
       source: input.source,
       fingerprint: input.fingerprint,
+      apiKey: input.apiKey,
     });
   }
 
@@ -39,11 +41,13 @@ export async function extractContextFromSource(input: {
     return extractVideoContext({
       source: input.source,
       fingerprint: input.fingerprint,
+      apiKey: input.apiKey,
     });
   }
 
   return extractDocumentContext({
     source: input.source,
     fingerprint: input.fingerprint,
+    apiKey: input.apiKey,
   });
 }

@@ -24,6 +24,7 @@ import type { ContentTypeId, AspectRatioId, GeneratedContentRecord } from '../..
 import { GENERATED_CONTENT_TABLE } from '../../lib/supabase/constants';
 import { getSupabaseBrowserClient } from '../../lib/supabase/client';
 import type { WorkspaceSummary } from './WorkspaceScreen';
+import { getApiHeaders } from '../../lib/byok/keys';
 
 type GenerationJobStatus = 'queued' | 'generating' | 'done' | 'error';
 
@@ -163,7 +164,7 @@ export function WorkspaceCanvas({
     try {
       const res = await fetch('/api/context/pack', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
         body: JSON.stringify({ workspaceId }),
       });
       const json = (await res.json()) as { contextPack?: WorkspaceContextPack; error?: string };
@@ -205,7 +206,7 @@ export function WorkspaceCanvas({
       try {
         const res = await fetch('/api/campaign/generate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
           body: JSON.stringify({
             platform: job.platform,
             contentType: job.contentType,
@@ -532,6 +533,7 @@ export function WorkspaceCanvas({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getApiHeaders(),
         },
         body: JSON.stringify({ workspaceId }),
       });

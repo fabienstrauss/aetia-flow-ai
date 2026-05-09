@@ -18,6 +18,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 });
     }
 
+    const geminiKey = request.headers.get('x-gemini-key') ?? process.env.GEMINI_API_KEY ?? '';
+
     const client = await getSupabaseServerClient();
     const canvasState = await loadCanvasState(client, workspaceId);
     const choiceConfig = await loadCampaignConfig(client, workspaceId);
@@ -27,6 +29,7 @@ export async function POST(request: Request) {
       workspaceId,
       nodes: canvasState.nodes,
       choiceConfig,
+      apiKey: geminiKey,
     });
 
     return NextResponse.json(result);

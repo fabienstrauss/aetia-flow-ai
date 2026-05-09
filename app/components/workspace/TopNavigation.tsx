@@ -7,6 +7,7 @@ import { Check, ChevronDown, LogOut, MoreHorizontal, Pencil, Plus, Settings, Tra
 
 import { getSupabaseBrowserClient } from '../../lib/supabase/client';
 import type { WorkspaceSummary } from './WorkspaceScreen';
+import { SettingsModal } from './SettingsModal';
 
 type PersistenceStatus = 'local-only' | 'loading' | 'ready' | 'saving' | 'saved' | 'error';
 
@@ -423,9 +424,11 @@ function WorkspaceSwitcher({
 function UserMenu({
   userEmail,
   userAvatarUrl,
+  onOpenSettings,
 }: {
   userEmail: string;
   userAvatarUrl?: string;
+  onOpenSettings: () => void;
 }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -485,14 +488,14 @@ function UserMenu({
 
         <div className="p-2">
           <button
-            disabled
-            className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-slate-300"
+            onClick={() => {
+              setIsOpen(false);
+              onOpenSettings();
+            }}
+            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
           >
             <Settings size={13} />
             Settings
-            <span className="ml-auto text-[9px] font-bold uppercase tracking-wider text-slate-200">
-              Soon
-            </span>
           </button>
           <button
             onClick={() => void handleSignOut()}
@@ -518,47 +521,57 @@ export function TopNavigation({
   userEmail,
   userAvatarUrl,
 }: TopNavigationProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-20 px-4 pt-4">
-      {/* Fixed-height row so all three sections align to the same baseline */}
-      <div className="relative flex h-9 items-center">
-        {/* Left — self-start so the morphing container anchors at the top of the
-            row and expands downward, never getting pushed upward by items-center */}
-        <div className="pointer-events-auto self-start">
-          <WorkspaceSwitcher
-            currentWorkspaceId={workspaceId}
-            currentWorkspaceName={workspaceName}
-            initialWorkspaces={workspaces}
-            persistenceStatus={persistenceStatus}
-            persistenceError={persistenceError}
-          />
-        </div>
+    <>
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-20 px-4 pt-4">
+        {/* Fixed-height row so all three sections align to the same baseline */}
+        <div className="relative flex h-9 items-center">
+          {/* Left — self-start so the morphing container anchors at the top of the
+              row and expands downward, never getting pushed upward by items-center */}
+          <div className="pointer-events-auto self-start">
+            <WorkspaceSwitcher
+              currentWorkspaceId={workspaceId}
+              currentWorkspaceName={workspaceName}
+              initialWorkspaces={workspaces}
+              persistenceStatus={persistenceStatus}
+              persistenceError={persistenceError}
+            />
+          </div>
 
-        {/* Centre — absolutely positioned so it's truly centered regardless of side widths */}
-        <div className="pointer-events-auto absolute inset-y-0 left-1/2 flex -translate-x-1/2 items-center">
-          <nav className="flex items-center gap-1 rounded-full border border-white/20 bg-slate-900/10 p-1 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] backdrop-blur-xl">
-            {STEPS.map((step) => (
-              <button
-                key={step.id}
-                onClick={() => onStepClick(step.id)}
-                className={[
-                  'rounded-full px-4 py-1.5 text-[10px] font-bold tracking-[0.12em] transition-all',
-                  currentStep === step.id
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-white/50 hover:text-slate-900',
-                ].join(' ')}
-              >
-                {step.id}. {step.label}
-              </button>
-            ))}
-          </nav>
-        </div>
+          {/* Centre — absolutely positioned so it's truly centered regardless of side widths */}
+          <div className="pointer-events-auto absolute inset-y-0 left-1/2 flex -translate-x-1/2 items-center">
+            <nav className="flex items-center gap-1 rounded-full border border-white/20 bg-slate-900/10 p-1 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] backdrop-blur-xl">
+              {STEPS.map((step) => (
+                <button
+                  key={step.id}
+                  onClick={() => onStepClick(step.id)}
+                  className={[
+                    'rounded-full px-4 py-1.5 text-[10px] font-bold tracking-[0.12em] transition-all',
+                    currentStep === step.id
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-white/50 hover:text-slate-900',
+                  ].join(' ')}
+                >
+                  {step.id}. {step.label}
+                </button>
+              ))}
+            </nav>
+          </div>
 
-        {/* Right — user avatar menu */}
-        <div className="pointer-events-auto ml-auto">
-          <UserMenu userEmail={userEmail} userAvatarUrl={userAvatarUrl} />
+          {/* Right — user avatar menu */}
+          <div className="pointer-events-auto ml-auto">
+            <UserMenu
+              userEmail={userEmail}
+              userAvatarUrl={userAvatarUrl}
+              onOpenSettings={() => setSettingsOpen(true)}
+            />
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+    </>
   );
 }

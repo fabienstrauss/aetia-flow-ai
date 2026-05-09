@@ -10,12 +10,6 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const GEMINI_IMAGE_MODEL = 'gemini-3-pro-image-preview';
 const GEMINI_VEO_MODEL = 'veo-3.1-fast-generate-preview'; //veo-3.1-generate-preview
 
-function getApiKey(): string {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error('Missing GEMINI_API_KEY');
-  return key;
-}
-
 function toApiAspectRatio(ar: AspectRatioId): string {
   const map: Record<AspectRatioId, string> = {
     vertical: '9:16',
@@ -29,9 +23,9 @@ function toApiAspectRatio(ar: AspectRatioId): string {
 async function generateImageBytes(
   prompt: string,
   aspectRatio: AspectRatioId,
+  apiKey: string,
   referenceImageUrl?: string,
 ): Promise<{ bytes: Uint8Array; mimeType: string }> {
-  const apiKey = getApiKey();
 
   const parts: any[] = [{ text: prompt }];
 
@@ -99,9 +93,9 @@ async function generateImageBytes(
 async function generateVideoBytes(
   prompt: string,
   aspectRatio: AspectRatioId,
+  apiKey: string,
   referenceImageUrl?: string,
 ): Promise<{ bytes: Uint8Array }> {
-  const apiKey = getApiKey();
 
   type VeoOperation = {
     name?: string;
@@ -200,6 +194,7 @@ export async function generateAndStoreCampaignContent(input: {
   refineReferenceUrl?: string;
   existingId?: string;
   existingStoragePath?: string;
+  apiKey: string;
 }): Promise<GeneratedContentRecord> {
   const isVideo = input.contentType === 'video';
   const prefix = `${input.platform}-${input.contentType}`;
@@ -232,7 +227,7 @@ export async function generateAndStoreCampaignContent(input: {
       }
     }
 
-    const { bytes } = await generateVideoBytes(input.prompt, input.aspectRatio, referenceImageUrl);
+    const { bytes } = await generateVideoBytes(input.prompt, input.aspectRatio, input.apiKey, referenceImageUrl);
     console.log(`[generate] Uploading video to storage…`);
     const uploaded = await uploadGeneratedContent({
       bytes,
@@ -269,7 +264,7 @@ export async function generateAndStoreCampaignContent(input: {
       console.log(`[generate] Using reference image: ${referenceImageUrl}`);
     }
 
-    const { bytes, mimeType: imgMime } = await generateImageBytes(input.prompt, input.aspectRatio, referenceImageUrl);
+    const { bytes, mimeType: imgMime } = await generateImageBytes(input.prompt, input.aspectRatio, input.apiKey, referenceImageUrl);
     const ext = imgMime.includes('jpeg') ? 'jpg' : 'png';
     console.log(`[generate] Uploading image to storage…`);
     const uploaded = await uploadGeneratedContent({ bytes, mimeType: imgMime, extension: ext, prefix });

@@ -25,16 +25,6 @@ type GeminiContextResponse = {
 
 const MAX_INLINE_DOCUMENT_BYTES = 20 * 1024 * 1024;
 
-function getGeminiApiKey() {
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    throw new Error('Missing GEMINI_API_KEY');
-  }
-
-  return apiKey;
-}
-
 function getAssetUrl(asset: CanvasAssetItem) {
   if (!asset.previewUrl || asset.previewUrl.startsWith('blob:')) {
     throw new Error(`Asset ${asset.label} is not available from a persistent URL`);
@@ -116,9 +106,8 @@ function createFallbackMediaArtifact(input: {
   };
 }
 
-async function uploadRemoteAssetToGemini(asset: CanvasAssetItem) {
+async function uploadRemoteAssetToGemini(asset: CanvasAssetItem, apiKey: string) {
   const { bytes } = await fetchPersistentAssetBytes(asset);
-  const apiKey = getGeminiApiKey();
   const response = await fetch(`${GEMINI_API_BASE}/files?key=${apiKey}`, {
     method: 'POST',
     headers: {
@@ -184,8 +173,9 @@ async function requestStructuredMediaExtraction(input: {
   title?: string;
   fileUri: string;
   mimeType: string;
+  apiKey: string;
 }) {
-  const apiKey = getGeminiApiKey();
+  const { apiKey } = input;
   const response = await fetch(
     `${GEMINI_API_BASE}/models/${GEMINI_CONTEXT_MODEL}:generateContent?key=${apiKey}`,
     {
@@ -283,8 +273,9 @@ async function requestStructuredInlineDocumentExtraction(input: {
   title?: string;
   bytes: Buffer;
   mimeType: string;
+  apiKey: string;
 }) {
-  const apiKey = getGeminiApiKey();
+  const { apiKey } = input;
   const response = await fetch(
     `${GEMINI_API_BASE}/models/${GEMINI_CONTEXT_MODEL}:generateContent?key=${apiKey}`,
     {
@@ -374,6 +365,7 @@ export async function extractMediaContextWithGemini(input: {
   sourceFingerprint: string;
   title?: string;
   asset: CanvasAssetItem;
+  apiKey: string;
 }) {
   const now = new Date().toISOString();
   let extracted: Omit<
@@ -391,23 +383,26 @@ export async function extractMediaContextWithGemini(input: {
           title: input.title,
           bytes,
           mimeType,
+          apiKey: input.apiKey,
         });
       } else {
-        const uploadedFile = await uploadRemoteAssetToGemini(input.asset);
+        const uploadedFile = await uploadRemoteAssetToGemini(input.asset, input.apiKey);
         extracted = await requestStructuredMediaExtraction({
           sourceType: input.sourceType,
           title: input.title,
           fileUri: uploadedFile.uri,
           mimeType: uploadedFile.mimeType,
+          apiKey: input.apiKey,
         });
       }
     } else {
-      const uploadedFile = await uploadRemoteAssetToGemini(input.asset);
+      const uploadedFile = await uploadRemoteAssetToGemini(input.asset, input.apiKey);
       extracted = await requestStructuredMediaExtraction({
         sourceType: input.sourceType,
         title: input.title,
         fileUri: uploadedFile.uri,
         mimeType: uploadedFile.mimeType,
+        apiKey: input.apiKey,
       });
     }
   } catch {

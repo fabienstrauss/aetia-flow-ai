@@ -4,6 +4,7 @@ import type { ContextSource } from '../types';
 export async function extractImageContext(input: {
   source: ContextSource;
   fingerprint: string;
+  apiKey: string;
 }) {
   if (!('asset' in input.source)) {
     throw new Error('Image context extraction requires an asset source');
@@ -16,5 +17,6 @@ export async function extractImageContext(input: {
     sourceFingerprint: input.fingerprint,
     title: input.source.title,
     asset: input.source.asset,
+    apiKey: input.apiKey,
   });
 }
