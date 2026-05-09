@@ -1,7 +1,6 @@
 import 'server-only';
 
 import type { CanvasInsertionPayload, TavilyInput } from '../canvas/contracts';
-import { getRequiredServerEnv } from './env';
 
 type TavilySearchResult = {
   title?: string;
@@ -34,14 +33,10 @@ function hostnameFromUrl(url?: string) {
   }
 }
 
-export function isTavilyConfigured() {
-  return Boolean(process.env.TAVILY_API_KEY);
-}
-
 export async function searchWithTavily(
   input: TavilyInput,
+  apiKey: string,
 ): Promise<CanvasInsertionPayload> {
-  const apiKey = getRequiredServerEnv('TAVILY_API_KEY');
 
   const response = await fetch('https://api.tavily.com/search', {
     method: 'POST',

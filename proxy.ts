@@ -11,7 +11,7 @@ function isPublic(pathname: string) {
   );
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Build a mutable response so the refreshed session cookie can be written.
   let response = NextResponse.next({ request });
 

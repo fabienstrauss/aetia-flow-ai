@@ -15,6 +15,7 @@ import {
   initialEdges,
   initialNodes,
 } from '../lib/canvas/sample-data';
+import { getApiHeaders } from '../lib/byok/keys';
 import type {
   CanvasInsertionPayload,
   GenerateInput,
@@ -243,6 +244,7 @@ export function useCanvasBoard(workspaceId?: string) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getApiHeaders(),
         },
         body: JSON.stringify(body),
       });

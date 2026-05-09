@@ -4,7 +4,6 @@ import type { GeneratedContentRecord, ContentTypeId, AspectRatioId } from '../..
 import type { WorkspaceContextPack } from '../../../lib/context/workspace-context';
 import { buildMasterPrompt } from '../../../lib/campaign/prompt-builder';
 import { generateAndStoreCampaignContent, deleteGeneratedContent } from '../../../lib/campaign/generate';
-import { isGeminiConfigured } from '../../../lib/providers/gemini';
 
 export const maxDuration = 300;
 
@@ -27,8 +26,9 @@ export type DeleteCampaignRequest = {
 };
 
 export async function POST(request: Request) {
-  if (!isGeminiConfigured()) {
-    return NextResponse.json({ error: 'Gemini API not configured' }, { status: 503 });
+  const geminiKey = request.headers.get('x-gemini-key') ?? process.env.GEMINI_API_KEY ?? null;
+  if (!geminiKey) {
+    return NextResponse.json({ error: 'Gemini API key not configured' }, { status: 503 });
   }
 
   let body: GenerateCampaignRequest;
@@ -65,6 +65,7 @@ export async function POST(request: Request) {
       refineReferenceUrl: body.referenceAsset?.public_url,
       existingId: body.existingId,
       existingStoragePath: body.referenceAsset?.storage_path,
+      apiKey: geminiKey,
     });
 
     return NextResponse.json(result);
