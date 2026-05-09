@@ -25,6 +25,7 @@ export async function extractWorkspaceSources(input: {
   workspaceId: string;
   nodes: CanvasNode[];
   choiceConfig: ChoiceConfig | null;
+  apiKey: string;
 }) {
   const artifacts: ExtractedContextArtifact[] = [];
   const errors: WorkspaceExtractionResult['errors'] = [];
@@ -56,6 +57,7 @@ export async function extractWorkspaceSources(input: {
       const extracted = await extractContextFromSource({
         source,
         fingerprint,
+        apiKey: input.apiKey,
       });
 
       await saveContextArtifact(input.client, extracted);

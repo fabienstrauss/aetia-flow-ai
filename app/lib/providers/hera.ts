@@ -20,18 +20,7 @@ type HeraPollResponse = {
   }>;
 };
 
-function getApiKey(): string {
-  const key = process.env.HERA_API_KEY;
-  if (!key) throw new Error('Missing HERA_API_KEY');
-  return key;
-}
-
-export function isHeraConfigured(): boolean {
-  return Boolean(process.env.HERA_API_KEY);
-}
-
-async function startGeneration(prompt: string): Promise<string> {
-  const apiKey = getApiKey();
+async function startGeneration(prompt: string, apiKey: string): Promise<string> {
 
   console.log('[hera] → POST /videos');
   const res = await fetch(`${HERA_API_BASE}/videos`, {
@@ -58,8 +47,7 @@ async function startGeneration(prompt: string): Promise<string> {
   return json.video_id;
 }
 
-async function pollUntilDone(videoId: string): Promise<string> {
-  const apiKey = getApiKey();
+async function pollUntilDone(videoId: string, apiKey: string): Promise<string> {
 
   for (let attempt = 0; attempt < 60; attempt++) {
     await new Promise((r) => setTimeout(r, 5_000));
@@ -87,9 +75,9 @@ async function pollUntilDone(videoId: string): Promise<string> {
   throw new Error('Timed out waiting for Hera video generation');
 }
 
-export async function generateHeraAnimationPayload(prompt: string): Promise<CanvasInsertionPayload> {
-  const videoId = await startGeneration(prompt);
-  const fileUrl = await pollUntilDone(videoId);
+export async function generateHeraAnimationPayload(prompt: string, apiKey: string): Promise<CanvasInsertionPayload> {
+  const videoId = await startGeneration(prompt, apiKey);
+  const fileUrl = await pollUntilDone(videoId, apiKey);
 
   console.log('[hera] Downloading video…');
   const dlRes = await fetch(fileUrl);
