@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getSupabaseServerClient } from '../supabase/server';
+import { getSupabaseAdminClient } from '../supabase/server';
 import { uploadGeneratedContent } from '../supabase/storage-server';
 import { GENERATED_CONTENT_BUCKET, GENERATED_CONTENT_TABLE } from '../supabase/constants';
 import type { ContentTypeId, AspectRatioId, GeneratedContentRecord } from './types';
@@ -182,6 +182,7 @@ async function generateVideoBytes(
 }
 
 export async function generateAndStoreCampaignContent(input: {
+  userId: string;
   workspaceId: string;
   platform: string;
   contentType: ContentTypeId;
@@ -273,14 +274,24 @@ export async function generateAndStoreCampaignContent(input: {
     mimeType = imgMime;
   }
 
-  const supabase = await getSupabaseServerClient();
+  const admin = getSupabaseAdminClient();
+
+  // Verify the caller owns the workspace (userId comes from the route handler which read it from the session).
+  console.log('[generate] ownership check — userId:', input.userId, 'workspaceId:', input.workspaceId);
+  const { data: workspace, error: wsError } = await admin
+    .from('workspaces')
+    .select('id, owner_id')
+    .eq('id', input.workspaceId)
+    .single();
+  console.log('[generate] workspace row:', workspace, 'error:', wsError?.message ?? 'none');
+  if (!workspace || workspace.owner_id !== input.userId) throw new Error('Workspace not found or access denied');
 
   // When refining: clean up old storage file and DB record before inserting fresh
   if (input.existingId) {
     if (input.existingStoragePath) {
-      try { await supabase.storage.from(GENERATED_CONTENT_BUCKET).remove([input.existingStoragePath]); } catch {}
+      try { await admin.storage.from(GENERATED_CONTENT_BUCKET).remove([input.existingStoragePath]); } catch {}
     }
-    try { await supabase.from(GENERATED_CONTENT_TABLE).delete().eq('id', input.existingId); } catch {}
+    try { await admin.from(GENERATED_CONTENT_TABLE).delete().eq('id', input.existingId); } catch {}
   }
 
   console.log(`[generate] Saving record to DB…`);
@@ -297,7 +308,7 @@ export async function generateAndStoreCampaignContent(input: {
     aspect_ratio: input.aspectRatio,
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from(GENERATED_CONTENT_TABLE)
     .insert(payload)
     .select()
@@ -308,9 +319,9 @@ export async function generateAndStoreCampaignContent(input: {
 }
 
 export async function deleteGeneratedContent(id: string, storagePath: string): Promise<void> {
-  const supabase = await getSupabaseServerClient();
+  const admin = getSupabaseAdminClient();
 
-  const { data: existingRecord } = await supabase
+  const { data: existingRecord } = await admin
     .from(GENERATED_CONTENT_TABLE)
     .select('voiceover_storage_path')
     .eq('id', id)
@@ -321,13 +332,13 @@ export async function deleteGeneratedContent(id: string, storagePath: string): P
     pathsToDelete.push(existingRecord.voiceover_storage_path);
   }
 
-  const { error: storageError } = await supabase.storage
+  const { error: storageError } = await admin.storage
     .from(GENERATED_CONTENT_BUCKET)
     .remove(pathsToDelete);
 
   if (storageError) throw storageError;
 
-  const { error: dbError } = await supabase
+  const { error: dbError } = await admin
     .from(GENERATED_CONTENT_TABLE)
     .delete()
     .eq('id', id);

@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
 import type { GeneratedContentRecord, ContentTypeId, AspectRatioId } from '../../../lib/campaign/types';
 import type { WorkspaceContextPack } from '../../../lib/context/workspace-context';
@@ -25,10 +26,33 @@ export type DeleteCampaignRequest = {
   storagePath: string;
 };
 
-export async function POST(request: Request) {
+async function getUserFromRequest(request: NextRequest): Promise<string | null> {
+  const cookieNames = request.cookies.getAll().map(c => c.name);
+  console.log('[auth] cookies present:', cookieNames);
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll(); },
+        setAll() {},
+      },
+    },
+  );
+  const { data: { user }, error } = await supabase.auth.getUser();
+  console.log('[auth] user:', user?.id ?? 'null', 'error:', error?.message ?? 'none');
+  return user?.id ?? null;
+}
+
+export async function POST(request: NextRequest) {
   const geminiKey = request.headers.get('x-gemini-key') ?? process.env.GEMINI_API_KEY ?? null;
   if (!geminiKey) {
     return NextResponse.json({ error: 'Gemini API key not configured' }, { status: 503 });
+  }
+
+  const userId = await getUserFromRequest(request);
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   let body: GenerateCampaignRequest;
@@ -53,6 +77,7 @@ export async function POST(request: Request) {
       : basePrompt;
 
     const result = await generateAndStoreCampaignContent({
+      userId,
       workspaceId: body.workspaceId,
       platform: body.platform,
       contentType: body.contentType,
@@ -76,7 +101,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   let body: DeleteCampaignRequest;
   try {
     body = (await request.json()) as DeleteCampaignRequest;
