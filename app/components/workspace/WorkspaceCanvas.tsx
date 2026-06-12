@@ -208,6 +208,7 @@ export function WorkspaceCanvas({
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
           body: JSON.stringify({
+            workspaceId,
             platform: job.platform,
             contentType: job.contentType,
             audience: job.audience,
@@ -316,8 +317,9 @@ export function WorkspaceCanvas({
 
       const res = await fetch('/api/campaign/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
         body: JSON.stringify({
+          workspaceId,
           platform: job.platform,
           contentType: job.contentType,
           audience: job.audience,
